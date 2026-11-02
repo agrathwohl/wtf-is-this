@@ -39,21 +39,21 @@ No server. No cloud. No telemetry. No Electron. A WebExtension, one Python file 
 
 ## Install
 
-```sh
-git clone https://github.com/agrathwohl/wtf-is-this
-cd wtf-is-this
-./install.sh
-```
+Two halves. The extension half is on Mozilla's add-on site. The host half is one script in this repo, because AMO does not ship things that spawn tmux on your machine, and thank fuck for that.
 
-`install.sh` does three boring things:
+1. **Extension:** https://addons.mozilla.org/firefox/addon/wtfisthis/ — click **Add to Firefox**. Signed by Mozilla, auto-updates, no `about:debugging` nonsense.
+2. **Host:**
+   ```sh
+   git clone https://github.com/agrathwohl/wtf-is-this
+   cd wtf-is-this
+   ./install.sh
+   ```
+   `install.sh` writes the native-messaging manifest to `~/.mozilla/native-messaging-hosts/wtfisthis.json` (macOS: `~/Library/Application Support/Mozilla/NativeMessagingHosts/`), which is how Firefox is allowed to spawn `host/wtfisthis-host` ([MDN: Native messaging](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging)). It also writes a default config to `~/.config/wtfisthis/config.json` if you have none. **Open it. Edit it.** It picks up `$TERMINAL`; if that's unset you get `xterm -e`, and you deserve it.
+3. Click the red **WTF**. If the popup shows an error about the native host, you skipped step 2. Read it again.
 
-1. Writes the native-messaging manifest to `~/.mozilla/native-messaging-hosts/wtfisthis.json` (macOS: `~/Library/Application Support/Mozilla/NativeMessagingHosts/`). This is how Firefox is allowed to spawn `host/wtfisthis-host`. Reference: [MDN: Native messaging](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging).
-2. Writes a default config to `~/.config/wtfisthis/config.json` if you have none. **Open it. Edit it.** It picks up `$TERMINAL`; if that's unset you get `xterm -e`, and you deserve it.
-3. Zips `ext/` into `wtfisthis.xpi`.
+### Hacking on it (or: the part where Mozilla ruins your afternoon)
 
-### Then the part where Mozilla ruins your afternoon
-
-Release Firefox **refuses to permanently install an unsigned extension**. Not a pref. Not a flag. Compiled in. Source: [Mozilla: Add-on signing in Firefox](https://support.mozilla.org/en-US/kb/add-on-signing-in-firefox). You have two options, and you will hate both:
+You changed `ext/` and want to run your copy. Release Firefox **refuses to permanently install an unsigned extension**. Not a pref. Not a flag. Compiled in. Source: [Mozilla: Add-on signing in Firefox](https://support.mozilla.org/en-US/kb/add-on-signing-in-firefox). Two options, you will hate both:
 
 **Option A, the temporary load (zero setup, dies on restart):**
 1. Open `about:debugging#/runtime/this-firefox`.
@@ -67,8 +67,8 @@ Release Firefox **refuses to permanently install an unsigned extension**. Not a 
 3. ```sh
    web-ext sign -s ext --channel unlisted --api-key 'user:XXXX:XXX' --api-secret 'XXXX'
    ```
-   (Nix: `nix run nixpkgs#web-ext -- sign ...`. npm: `npm i -g web-ext`.) Reference: [web-ext command reference](https://extensionworkshop.com/documentation/develop/web-ext-command-reference/#web-ext-sign).
-4. Open the signed file: `firefox web-ext-artifacts/*.xpi`, click **Add**. Done forever, until you bump the version, then do step 3 again.
+   (Nix: `nix run nixpkgs#web-ext -- sign ...`. npm: `npm i -g web-ext`.) Reference: [web-ext command reference](https://extensionworkshop.com/documentation/develop/web-ext-command-reference/#web-ext-sign). AMO never accepts a version number twice, so bump `version` in the manifest first.
+4. Open the signed file: `firefox web-ext-artifacts/*.xpi`, click **Add**. If your Firefox runs with an explicit `--profile`, pass the same absolute path, or you get a second Firefox on your default profile and a very confusing afternoon.
 
 Developer Edition and Nightly honor `xpinstall.signatures.required = false`. Release and Beta do not. Don't argue with me, argue with Mozilla.
 
@@ -143,4 +143,4 @@ Presets do **not** add yolo flags. If you want `--dangerously-skip-permissions`,
 
 ## License
 
-None picked yet. Until the author picks one, default copyright applies, which is boring for everyone. Nag him.
+MIT. See LICENSE. Do whatever you want, just do not come crying.

@@ -1,8 +1,9 @@
 {
   "manifest_version": 2,
   "name": "WTFISTHIS",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "WTF is this page? Digest it and ask Claude Code in a new tmux session.",
+  "homepage_url": "https://github.com/agrathwohl/wtf-is-this",
   "browser_specific_settings": { "gecko": { "id": "wtfisthis@grathwohl.me", "strict_min_version": "115.0" } },
   "permissions": ["nativeMessaging", "tabs", "<all_urls>"],
   "icons": { "48": "icon.svg", "96": "icon.svg" },

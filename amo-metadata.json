@@ -1,0 +1,20 @@
+{
+  "summary": {
+    "en-US": "Sends the page you are on to your own coding agent (Claude Code, Codex, OpenCode, Hermes or any CLI) in a new tmux session and keeps every digest and answer in a searchable local sqlite database. Needs the native host from the GitHub repo."
+  },
+  "description": {
+    "en-US": "WTFISTHIS extracts the current page (URL, title, all meta tags, JSON-LD, headings, visible text, links, your selection) and starts your coding agent in a new tmux session with that digest as the first prompt. You read the answer in your own terminal and keep asking. Digests and answers are stored in a local sqlite database and searchable from the popup.\n\nThis extension does nothing on its own. It talks to a small native-messaging host (one Python file, no dependencies) that you install from https://github.com/agrathwohl/wtf-is-this with ./install.sh. The host runs your agent command from a config file; presets exist for Claude Code, Codex, OpenCode and Hermes, and any other command line agent works with one line of config.\n\nNo server, no accounts, no telemetry. Everything stays on your machine and in whatever agent subscription you already pay for.\n\nTriggers: toolbar button (with an optional question), Ctrl+Alt+W, or open any URL with #WTFISTHIS appended."
+  },
+  "homepage": {
+    "en-US": "https://github.com/agrathwohl/wtf-is-this"
+  },
+  "support_url": {
+    "en-US": "https://github.com/agrathwohl/wtf-is-this/issues"
+  },
+  "categories": [
+    "other"
+  ],
+  "version": {
+    "license": "MIT"
+  }
+}
