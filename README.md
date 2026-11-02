@@ -33,7 +33,7 @@ No server. No cloud. No telemetry. No Electron. A WebExtension, one Python file 
 - Firefox 115+ (tested on 158). Chrome users: no. Go away. Chrome has no native-messaging host dir you'd enjoy configuring either.
 - Linux. macOS probably works if your terminal takes `-e cmd` and you fix the paths; nobody has tried. PRs welcome, whining is not.
 - `tmux`.
-- Python 3.10+. [`uv`](https://docs.astral.sh/uv/) if you have it (the wrapper uses it), plain `python3` if you don't.
+- Python 3.10+ and [`uv`](https://docs.astral.sh/uv/). The host is one stdlib-only file and the wrapper runs it with `uv run python`. No, there is no `python3` fallback. Install uv, it takes four seconds.
 - A terminal emulator that accepts a command argument: alacritty, foot, kitty, ghostty, wezterm, xterm, gnome-terminal, whatever. Configure it, see below.
 - An agent CLI with a subscription or API key you are already bleeding money into. Presets exist for `claude`, `codex`, `opencode`, `hermes`. Anything else: write one line of config.
 
@@ -91,7 +91,7 @@ Developer Edition and Nightly honor `xpinstall.signatures.required = false`. Rel
 | `resume_command` | preset's | shell string to resume a dead session; `null` = reattach only |
 | `transcript` | preset's | how answers get into the DB: `claude`, `codex`, `pane`, `none` |
 | `terminal` | `"$TERMINAL -e"` | command prefix; `tmux attach-session -t NAME` is appended |
-| `env` | `{}` | extra `export`s inside the tmux session, e.g. `{"PATH": "/weird/bin:$PATH"}` |
+| `env` | `{}` | extra `export`s inside the tmux session, e.g. `{"PATH": "/weird/bin:$PATH"}`; values are double-quoted, so `$VAR` expands and spaces survive |
 | `tmux_prefix` | `"wtfisthis"` | sessions are named `PREFIX-<row id>` |
 | `data_dir` | `"~/.local/share/wtfisthis"` | holds `wtfisthis.db` and `work/` (the agent's cwd) |
 | `preamble` | built-in | the instruction text in front of the digest; `{digest_file}` and `{session_id}` are substituted |

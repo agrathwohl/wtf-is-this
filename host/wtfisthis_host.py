@@ -9,9 +9,10 @@ Actions (JSON over stdin/stdout, 4-byte little-endian length prefix):
 
 Config file: $WTFISTHIS_CONFIG or $XDG_CONFIG_HOME/wtfisthis/config.json (see config.example.json / README).
 """
-import glob, json, os, shlex, sqlite3, struct, subprocess, sys, time, uuid
+import glob, json, os, re, shlex, sqlite3, struct, subprocess, sys, time, uuid
 from datetime import datetime, timezone
 
+os.environ.pop('TMUX', None)  # else `tmux attach` inside the new terminal refuses to nest
 HOME = os.path.expanduser('~')
 CONFIG_PATH = os.environ.get('WTFISTHIS_CONFIG') or os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config')), 'wtfisthis/config.json')
 ARG_LIMIT = 120_000  # Linux MAX_ARG_STRLEN is 128 KiB; "$(cat prompt_file)" becomes one argv entry
@@ -22,7 +23,7 @@ PRESETS = {
     'claude':   dict(start='claude --session-id {session_id} "$(cat {prompt_file})"', resume='claude --resume {agent_session_id}', transcript='claude'),
     'codex':    dict(start='codex "$(cat {prompt_file})"', resume='codex resume {agent_session_id}', transcript='codex'),
     'opencode': dict(start='opencode --session {session_id} --prompt "$(cat {prompt_file})"', resume='opencode --session {agent_session_id}', transcript='pane'),
-    'hermes':   dict(start='hermes chat -q "$(cat {prompt_file})"', resume=None, transcript='pane'),
+    'hermes':   dict(start='hermes chat -q "$(cat {prompt_file})"; exec "$SHELL"', resume=None, transcript='pane'),
     'custom':   dict(start=None, resume=None, transcript='pane'),
 }
 DEFAULTS = dict(agent='claude', start_command=None, resume_command=None, transcript=None,
@@ -35,8 +36,7 @@ PREAMBLE = ('You are WTFISTHIS. The user is looking at something in Firefox and 
             'For a paper: summarize question, methods, findings, limitations. For code: purpose, architecture, how to use. '
             'For an email: summarize and list action items. For an article: summary and context.\n'
             'The complete digest is saved at {digest_file} (the page text below may be truncated). '
-            'Fetch the URL yourself if you need more. The user may ask follow-up questions after your answer.\n'
-            'WTFISTHIS session token: {session_id}\n')
+            'Fetch the URL yourself if you need more. The user may ask follow-up questions after your answer.\n')
 
 
 def load_config():
@@ -59,7 +59,7 @@ def load_config():
 
 def db(cfg):
     os.makedirs(cfg['work_dir'], exist_ok=True)
-    c = sqlite3.connect(os.path.join(cfg['data_dir'], 'wtfisthis.db'))
+    c = sqlite3.connect(os.path.join(cfg['data_dir'], 'wtfisthis.db'), timeout=10)
     c.row_factory = sqlite3.Row
     c.execute('''CREATE TABLE IF NOT EXISTS digests(
         id INTEGER PRIMARY KEY, created_at TEXT NOT NULL, url TEXT NOT NULL, title TEXT, user_prompt TEXT,
@@ -95,7 +95,7 @@ def render_digest(page):
 
 
 def build_prompt(cfg, digest_md, digest_file, session_id, user_prompt):
-    head = (cfg['preamble'] or PREAMBLE).format(digest_file=digest_file, session_id=session_id)
+    head = (cfg['preamble'] or PREAMBLE).replace('{digest_file}', digest_file) + f'WTFISTHIS session token: {session_id}\n'
     if user_prompt:
         head += f'\nThe user also asks: {user_prompt}\n'
     cap = len(digest_md)
@@ -103,11 +103,15 @@ def build_prompt(cfg, digest_md, digest_file, session_id, user_prompt):
         prompt = head + '\n--- DIGEST ---\n' + digest_md[:cap] + ('\n[truncated; full digest in file]' if cap < len(digest_md) else '')
         if len(prompt.encode()) <= ARG_LIMIT:
             return prompt
+        if not cap:
+            raise ValueError('prompt/preamble alone exceeds the 120 KB argv limit')
         cap = int(cap * 0.8)
 
 
 def render(cmd, **vals):
-    return cmd.format_map({k: shlex.quote(str(v)) for k, v in vals.items()})
+    for k, v in vals.items():
+        cmd = cmd.replace('{' + k + '}', shlex.quote(str(v)))
+    return cmd
 
 
 def tmux(*args, **kw):
@@ -115,12 +119,13 @@ def tmux(*args, **kw):
 
 
 def open_terminal(cfg, name):
-    subprocess.Popen(shlex.split(cfg['terminal']) + ['tmux', 'attach-session', '-t', name], start_new_session=True, **QUIET)
+    subprocess.Popen(shlex.split(cfg['terminal']) + ['tmux', 'attach-session', '-t', '=' + name], start_new_session=True, **QUIET)
 
 
 def start_session(cfg, name, cmd):
-    exports = ' '.join([f'PATH={shlex.quote(os.environ["PATH"])}'] + [f'{k}={v}' for k, v in cfg['env'].items()])
-    tmux('new-session', '-d', '-s', name, '-c', cfg['work_dir'], f'export {exports}; {cmd}', check=True)
+    dq = lambda v: '"' + str(v).replace('\\', '\\\\').replace('"', '\\"').replace('`', '\\`') + '"'  # $VAR still expands
+    exports = ' '.join([f'PATH={shlex.quote(os.environ["PATH"])}'] + [f'{k}={dq(v)}' for k, v in cfg['env'].items()])
+    tmux('new-session', '-d', '-s', name, '-c', cfg['work_dir'], 'sh', '-c', f'export {exports}; {cmd}', check=True)
     open_terminal(cfg, name)
 
 
@@ -208,10 +213,10 @@ def find_transcript(r, pattern):
 
 def sync_answers(cfg, c):
     kind = cfg['transcript']
-    for r in c.execute('SELECT * FROM digests').fetchall():
+    for r in c.execute('SELECT * FROM digests WHERE agent=?', (cfg['agent'],)).fetchall():
         if kind == 'pane':
-            if tmux('has-session', '-t', r['tmux_session']).returncode == 0:
-                cap = subprocess.run(['tmux', 'capture-pane', '-p', '-S', '-', '-t', r['tmux_session']], capture_output=True, text=True, stdin=subprocess.DEVNULL)
+            if tmux('has-session', '-t', '=' + r['tmux_session']).returncode == 0:
+                cap = subprocess.run(['tmux', 'capture-pane', '-p', '-S', '-', '-t', '=' + r['tmux_session'] + ':'], capture_output=True, text=True, stdin=subprocess.DEVNULL)
                 c.execute('UPDATE digests SET answer=?, transcript_mtime=? WHERE id=?', (cap.stdout.strip(), time.time(), r['id']))
         elif kind in TRANSCRIPTS:
             pattern, messages = TRANSCRIPTS[kind]
@@ -238,9 +243,9 @@ def search(cfg, c, msg):
     sync_answers(cfg, c)
     q = msg.get('q', '').strip()
     # ponytail: LIKE scan; swap for an FTS5 table if the digest count ever makes this slow
-    like = f'%{q}%'
+    like = '%' + re.sub(r'([\\%_])', r'\\\1', q) + '%'
     rows = c.execute('''SELECT id, created_at, url, title, user_prompt, agent, answer, digest_md FROM digests
-                        WHERE ? = '' OR title LIKE ? OR url LIKE ? OR user_prompt LIKE ? OR digest_md LIKE ? OR answer LIKE ?
+                        WHERE ? = '' OR title LIKE ? ESCAPE '\\' OR url LIKE ? ESCAPE '\\' OR user_prompt LIKE ? ESCAPE '\\' OR digest_md LIKE ? ESCAPE '\\' OR answer LIKE ? ESCAPE '\\'
                         ORDER BY id DESC LIMIT 50''', (q, like, like, like, like, like)).fetchall()
     return [{'id': r['id'], 'created_at': r['created_at'], 'url': r['url'], 'title': r['title'], 'user_prompt': r['user_prompt'],
              'agent': r['agent'], 'has_answer': bool(r['answer']),
@@ -251,15 +256,19 @@ def search(cfg, c, msg):
 def get(cfg, c, msg):
     sync_answers(cfg, c)
     r = c.execute('SELECT * FROM digests WHERE id=?', (msg['id'],)).fetchone()
-    return {k: r[k] for k in r.keys() if k != 'page_json'}
+    out = {k: r[k] for k in r.keys() if k != 'page_json'}
+    out['digest_md'] = out['digest_md'][:200_000]
+    return out
 
 
 def continue_(cfg, c, msg):
     sync_answers(cfg, c)
     r = c.execute('SELECT * FROM digests WHERE id=?', (msg['id'],)).fetchone()
-    if tmux('has-session', '-t', r['tmux_session']).returncode == 0:
+    if tmux('has-session', '-t', '=' + r['tmux_session']).returncode == 0:
         open_terminal(cfg, r['tmux_session'])
         return {'how': 'attached to running', 'tmux_session': r['tmux_session']}
+    if r['agent'] != cfg['agent']:
+        raise RuntimeError(f"digest #{r['id']} was made with agent {r['agent']!r}; config now says {cfg['agent']!r}")
     if not cfg['resume_command'] or not r['agent_session_id']:
         raise RuntimeError(f"tmux session {r['tmux_session']} is gone and agent {r['agent']!r} has no resumable session id; "
                            f'set resume_command in {CONFIG_PATH}')
@@ -281,12 +290,13 @@ def main():
     if len(raw) < 4:
         return
     msg = json.loads(sys.stdin.buffer.read(struct.unpack('<I', raw)[0]))
+    msg = json.loads(json.dumps(msg, ensure_ascii=False).encode('utf-8', 'replace'))  # a .slice() can split a surrogate pair
     try:
         cfg = load_config()
         reply = ACTIONS[msg['action']](cfg, db(cfg), msg)
     except Exception as e:  # the popup shows this text
         reply = {'error': f'{type(e).__name__}: {e}'}
-    data = json.dumps(reply).encode()
+    data = json.dumps(reply, ensure_ascii=False).encode()
     sys.stdout.buffer.write(struct.pack('<I', len(data)) + data)
     sys.stdout.buffer.flush()
 

@@ -17,7 +17,7 @@ $('#go').onclick = async () => {
   $('#go').disabled = true;
   try {
     const r = await send({ action: 'digest', tabId: tab.id, user_prompt: $('#prompt').value.trim() });
-    status(`digest #${r.id} saved; claude is running in tmux session ${r.tmux_session}`);
+    status(`digest #${r.id} saved; ${r.agent} is running in tmux session ${r.tmux_session}`);
     search();
   } catch (e) { status(String(e), true); }
   $('#go').disabled = false;
@@ -41,8 +41,9 @@ async function search() {
     el.querySelector('.show').onclick = async (e) => {
       const a = el.querySelector('.a');
       if (!a.hidden) { a.hidden = true; e.target.textContent = 'show'; return; }
-      const full = await send({ action: 'get', id: r.id });
-      a.textContent = (full.answer || '(no answer captured yet — the claude session may still be running)') + '\n\n--- digest sent to claude ---\n' + full.digest_md;
+      let full;
+      try { full = await send({ action: 'get', id: r.id }); } catch (err) { status(String(err), true); return; }
+      a.textContent = (full.answer || `(no answer captured yet — the ${full.agent} session may still be running)`) + `\n\n--- digest sent to ${full.agent} ---\n` + full.digest_md;
       a.hidden = false;
       e.target.textContent = 'hide';
     };
