@@ -1,0 +1,11 @@
+{
+  "agent": "claude",
+  "start_command": null,
+  "resume_command": null,
+  "transcript": null,
+  "terminal": "@TERMINAL@ -e",
+  "env": {},
+  "tmux_prefix": "wtfisthis",
+  "data_dir": "~/.local/share/wtfisthis",
+  "preamble": null
+}

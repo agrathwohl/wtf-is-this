@@ -1,0 +1,14 @@
+{
+  "manifest_version": 2,
+  "name": "WTFISTHIS",
+  "version": "0.2.0",
+  "description": "WTF is this page? Digest it and ask Claude Code in a new tmux session.",
+  "browser_specific_settings": { "gecko": { "id": "wtfisthis@grathwohl.me", "strict_min_version": "115.0" } },
+  "permissions": ["nativeMessaging", "tabs", "<all_urls>"],
+  "icons": { "48": "icon.svg", "96": "icon.svg" },
+  "background": { "scripts": ["background.js"] },
+  "browser_action": { "default_title": "WTFISTHIS", "default_popup": "popup.html", "default_icon": "icon.svg" },
+  "commands": {
+    "wtfisthis": { "suggested_key": { "default": "Ctrl+Alt+W" }, "description": "WTF IS THIS? Digest the current tab" }
+  }
+}

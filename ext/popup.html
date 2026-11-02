@@ -1,0 +1,39 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>WTFISTHIS</title>
+<style>
+  :root { color-scheme: dark; }
+  body { width: 560px; margin: 0; padding: 12px; background: #111; color: #ddd; font: 13px/1.4 monospace; }
+  body.tab { width: auto; max-width: 900px; margin: 0 auto; }
+  h1 { margin: 0 0 8px; font-size: 20px; color: #ff5c5c; letter-spacing: 2px; }
+  h1 a { float: right; font-size: 11px; color: #777; letter-spacing: 0; }
+  #tab { color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  textarea, input { width: 100%; box-sizing: border-box; background: #1a1a1a; color: #eee; border: 1px solid #333; padding: 6px; font: inherit; }
+  textarea { height: 56px; resize: vertical; margin: 6px 0; }
+  button { background: #ff5c5c; color: #111; border: 0; padding: 6px 12px; font: inherit; font-weight: bold; cursor: pointer; }
+  button.sm { background: #333; color: #ddd; padding: 2px 8px; font-weight: normal; }
+  #status { margin: 6px 0; color: #8f8; min-height: 1.2em; }
+  #status.err { color: #f88; }
+  hr { border: 0; border-top: 1px solid #333; margin: 12px 0; }
+  .row { border: 1px solid #2a2a2a; padding: 6px 8px; margin: 6px 0; }
+  .row .t { color: #fff; font-weight: bold; }
+  .row .u { color: #6af; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+  .m { color: #777; font-size: 11px; }
+  #cfg { margin-top: 12px; white-space: pre-wrap; }
+  .row .s { color: #aaa; white-space: pre-wrap; margin-top: 4px; }
+  .row .a { white-space: pre-wrap; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #333; max-height: 60vh; overflow: auto; }
+  mark { background: #553; color: #fff; }
+</style>
+<body>
+<h1>WTFISTHIS <a href="#" id="open-tab">open as tab</a></h1>
+<div id="digest">
+  <div id="tab"></div>
+  <textarea id="prompt" placeholder="optional: what do you want to know about it?"></textarea>
+  <button id="go">WTF IS THIS?</button>
+</div>
+<div id="status"></div>
+<hr>
+<input id="q" placeholder="search digests (title, url, prompt, page text, answer)">
+<div id="results"></div>
+<div id="cfg" class="m"></div>
+<script src="popup.js"></script>

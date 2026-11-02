@@ -1,0 +1,7 @@
+{
+  "name": "wtfisthis",
+  "description": "WTFISTHIS native host: sqlite digests + tmux/claude launcher",
+  "path": "@HOST@",
+  "type": "stdio",
+  "allowed_extensions": ["wtfisthis@grathwohl.me"]
+}
