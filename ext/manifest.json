@@ -6,9 +6,9 @@
   "homepage_url": "https://github.com/agrathwohl/wtf-is-this",
   "browser_specific_settings": { "gecko": { "id": "wtfisthis@grathwohl.me", "strict_min_version": "115.0" } },
   "permissions": ["nativeMessaging", "tabs", "<all_urls>"],
-  "icons": { "48": "icon.svg", "96": "icon.svg" },
+  "icons": { "48": "icons/48.png", "96": "icons/96.png", "128": "icons/128.png" },
   "background": { "scripts": ["background.js"] },
-  "browser_action": { "default_title": "WTFISTHIS", "default_popup": "popup.html", "default_icon": "icon.svg" },
+  "browser_action": { "default_title": "WTFISTHIS", "default_popup": "popup.html", "default_icon": { "16": "icons/16.png", "32": "icons/32.png" } },
   "commands": {
     "wtfisthis": { "suggested_key": { "default": "Ctrl+Alt+W" }, "description": "WTF IS THIS? Digest the current tab" }
   }
