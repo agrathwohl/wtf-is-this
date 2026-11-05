@@ -1,0 +1,7 @@
+{
+  "name": "wtfisthis",
+  "description": "WTFISTHIS native host: sqlite digests + tmux/agent launcher",
+  "path": "@HOST@",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://@ID@/"]
+}

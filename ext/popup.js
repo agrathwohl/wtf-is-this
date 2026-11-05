@@ -1,16 +1,17 @@
+const api = globalThis.browser ?? globalThis.chrome;
 const $ = (s) => document.querySelector(s);
-const send = (m) => browser.runtime.sendMessage(m);
+const send = (m) => api.runtime.sendMessage(m).then((r) => (r && r.error ? Promise.reject(new Error(r.error)) : r));
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const status = (msg, err = false) => { $('#status').textContent = msg; $('#status').className = err ? 'err' : ''; };
 
 let tab;
-browser.tabs.query({ active: true, currentWindow: true }).then(([t]) => {
+api.tabs.query({ active: true, currentWindow: true }).then(([t]) => {
   tab = t;
-  if (t.url.startsWith('moz-extension:')) { document.body.classList.add('tab'); $('#digest').hidden = true; return; }
+  if (t.url.startsWith(api.runtime.getURL(''))) { document.body.classList.add('tab'); $('#digest').hidden = true; return; }
   $('#tab').textContent = `${t.title} — ${t.url}`;
 });
 
-$('#open-tab').onclick = (e) => { e.preventDefault(); browser.tabs.create({ url: browser.runtime.getURL('popup.html') }); };
+$('#open-tab').onclick = (e) => { e.preventDefault(); api.tabs.create({ url: api.runtime.getURL('popup.html') }); };
 
 $('#go').onclick = async () => {
   status('extracting page and starting tmux session…');

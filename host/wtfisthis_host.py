@@ -29,7 +29,7 @@ PRESETS = {
 DEFAULTS = dict(agent='claude', start_command=None, resume_command=None, transcript=None,
                 terminal=f"{os.environ.get('TERMINAL', 'xterm')} -e", env={}, tmux_prefix='wtfisthis',
                 data_dir='~/.local/share/wtfisthis', preamble=None)
-PREAMBLE = ('You are WTFISTHIS. The user is looking at something in Firefox and asks: WTF is this?\n'
+PREAMBLE = ('You are WTFISTHIS. The user is looking at something in their browser and asks: WTF is this?\n'
             'Below is an automated digest of the page (metadata and extracted text). Describe in full detail what this is: '
             'what kind of thing it is (web page, paper, GitHub project, news article, email, product, ...), who made it, '
             'what it says or does, the key points, relevant context, credibility signals, and anything notable. '

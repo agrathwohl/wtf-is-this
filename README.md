@@ -1,6 +1,6 @@
 # WTFISTHIS
 
-**A Firefox extension that looks at whatever godforsaken tab you have open, rips out everything useful, and throws it at your coding agent in a fresh tmux session so it can tell you what the fuck you are looking at.**
+**A Firefox and Chrome extension that looks at whatever godforsaken tab you have open, rips out everything useful, and throws it at your coding agent in a fresh tmux session so it can tell you what the fuck you are looking at.**
 
 You know the feeling. You click a link from a PDF. You land on a 40-page paper, a GitHub repo with 11 README badges and zero sentences, a news article with 600 words of ads around 80 words of news, or an email thread with 14 replies that all say "see below". Your brain says *wtf is this*. Now your toolbar says it too.
 
@@ -11,11 +11,11 @@ It is for people who can edit a JSON file and already have a terminal that doesn
 ## How it works
 
 ```
- Firefox tab ──click/shortcut/#WTFISTHIS──▶ ext/extract.js (runs in the page)
+ browser tab ──click/shortcut/#WTFISTHIS──▶ extract.js     (runs in the page)
                                                   │  url, title, meta[], json-ld, headings,
                                                   │  text, links, selection, counts
                                                   ▼
-                                         ext/background.js ──native messaging──▶ host/wtfisthis_host.py
+                                         background.js ──native messaging──────▶ host/wtfisthis_host.py
                                                                                       │
                                    sqlite  ◀────────── row + digest.md + prompt.md ───┤
                                                                                       ▼
@@ -30,7 +30,7 @@ No server. No cloud. No telemetry. No Electron. A WebExtension, one Python file 
 
 ## Requirements
 
-- Firefox 115+ (tested on 158). Chrome users: no. Go away. Chrome has no native-messaging host dir you'd enjoy configuring either.
+- Firefox 115+ (tested on 158), or Chrome / Chromium / Brave / Edge (tested on Brave, Chromium 156). Safari users: no. Go away.
 - Linux. macOS probably works if your terminal takes `-e cmd` and you fix the paths; nobody has tried. PRs welcome, whining is not.
 - `tmux`.
 - Python 3.10+ and [`uv`](https://docs.astral.sh/uv/). The host is one stdlib-only file and the wrapper runs it with `uv run python`. No, there is no `python3` fallback. Install uv, it takes four seconds.
@@ -39,17 +39,18 @@ No server. No cloud. No telemetry. No Electron. A WebExtension, one Python file 
 
 ## Install
 
-Two halves. The extension half is on Mozilla's add-on site. The host half is one script in this repo, because AMO does not ship things that spawn tmux on your machine, and thank fuck for that.
+Two halves. The extension half comes from the browser's own store (Firefox now, Chrome once Google finishes "reviewing" it). The host half is one script in this repo, because no store ships things that spawn tmux on your machine, and thank fuck for that.
 
-1. **Extension:** https://addons.mozilla.org/firefox/addon/wtfisthis/ — click **Add to Firefox**. Signed by Mozilla, auto-updates, no `about:debugging` nonsense.
-2. **Host:**
+1. **Host, first, for every browser:**
    ```sh
    git clone https://github.com/agrathwohl/wtf-is-this
    cd wtf-is-this
    ./install.sh
    ```
-   `install.sh` writes the native-messaging manifest to `~/.mozilla/native-messaging-hosts/wtfisthis.json` (macOS: `~/Library/Application Support/Mozilla/NativeMessagingHosts/`), which is how Firefox is allowed to spawn `host/wtfisthis-host` ([MDN: Native messaging](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging)). It also writes a default config to `~/.config/wtfisthis/config.json` if you have none. **Open it. Edit it.** It picks up `$TERMINAL`; if that's unset you get `xterm -e`, and you deserve it.
-3. Click the red **WTF**. If the popup shows an error about the native host, you skipped step 2. Read it again.
+   `install.sh` writes the native-messaging manifest for Firefox (`~/.mozilla/native-messaging-hosts/wtfisthis.json`, macOS: `~/Library/Application Support/Mozilla/NativeMessagingHosts/`) and for every Chromium-family browser you have a profile directory for: `~/.config/{google-chrome,chromium,BraveSoftware/Brave-Browser,microsoft-edge}/NativeMessagingHosts/wtfisthis.json` (macOS: the same browsers under `~/Library/Application Support/`). That manifest is how the browser is allowed to spawn `host/wtfisthis-host` ([MDN: Native messaging](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging), [Chrome: Native messaging](https://developer.chrome.com/docs/extensions/develop/concepts/native-messaging)). Installed another browser later? Run it again. It also writes a default config to `~/.config/wtfisthis/config.json` if you have none. **Open it. Edit it.** It picks up `$TERMINAL`; if that's unset you get `xterm -e`, and you deserve it.
+2. **Firefox:** https://addons.mozilla.org/firefox/addon/wtfisthis/ — click **Add to Firefox**. Signed by Mozilla, auto-updates, no `about:debugging` nonsense.
+3. **Chrome, Chromium, Brave, Edge:** not on the Chrome Web Store yet (see [Chrome Web Store](#chrome-web-store) below). Until then: open `chrome://extensions`, flip **Developer mode** (top right), click **Load unpacked**, pick the `chrome/` directory of this clone. That's it, and it survives restarts, because Google, unlike Mozilla, lets you run code on your own computer. The extension id must be `gcgjdmlnagiheihdchnndncdaljjlpnd`: it is pinned by the `key` in `chrome/manifest.json`, and `install.sh` derived the same id for the host manifest. If `chrome://extensions` shows a different id, run `WTFISTHIS_CHROME_ID=<that id> ./install.sh`.
+4. Click the red **WTF**. If the popup shows an error about the native host, you skipped step 1. Read it again.
 
 ### Hacking on it (or: the part where Mozilla ruins your afternoon)
 
@@ -72,11 +73,13 @@ You changed `ext/` and want to run your copy. Release Firefox **refuses to perma
 
 Developer Edition and Nightly honor `xpinstall.signatures.required = false`. Release and Beta do not. Don't argue with me, argue with Mozilla.
 
+**Chrome:** nothing to hack around. `chrome/popup.*` and `chrome/extract.js` are symlinks into `ext/`, so there is one popup and one extractor; `chrome/background.js` is the MV3 service-worker twin of `ext/background.js`. Edit, then hit the reload arrow on `chrome://extensions`. Forking and shipping your own Web Store listing? Replace the `key` in `chrome/manifest.json` with the public key the store shows you after your first upload (see below), rerun `./install.sh`, and the ids line up again.
+
 ## Use
 
 - Click the **WTF** toolbar button. Optionally type what you actually want to know ("is this paper's statistics bullshit?", "how do I build this repo?"). Hit **WTF IS THIS?**
-- Or press **Ctrl+Alt+W** on any tab. No prompt, straight to the terminal.
-- Or from a shell: `firefox 'https://example.com/whatever#WTFISTHIS'`. The extension sees the marker, waits for the page to finish loading, digests it, strips the marker from the stored URL. This is how the author tests it and how you can wire it into anything that can run a command.
+- Or press **Ctrl+Alt+W** (Firefox) or **Alt+Shift+W** (Chrome, which [forbids Ctrl+Alt shortcuts](https://developer.chrome.com/docs/extensions/reference/api/commands) because of AltGr) on any tab. No prompt, straight to the terminal.
+- Or from a shell: `firefox 'https://example.com/whatever#WTFISTHIS'` (or `google-chrome`, `brave`, whatever). The extension sees the marker, waits for the page to finish loading, digests it, strips the marker from the stored URL. This is how the author tests it and how you can wire it into anything that can run a command.
 - The popup's search box searches titles, URLs, your prompts, the digest text, and the agent's answers. **show** expands a row (answer first, digest below). **continue in tmux** reopens a terminal on the still-running session, or, for agents that support it, resumes the agent's session in a fresh tmux session after the old one died.
 - "open as tab" turns the popup into a full page, for when the 560px popup offends you.
 
@@ -135,11 +138,21 @@ Presets do **not** add yolo flags. If you want `--dangerously-skip-permissions`,
 
 ## Known limits, a.k.a. things you will file issues about anyway
 
-- **Cloudflare-walled pages digest exactly what Firefox rendered.** That's the point: it runs in *your* browser with *your* cookies. Run it in a fresh profile and you get a captcha digested in loving detail.
-- **Firefox's built-in PDF viewer, `about:` pages, and other privileged pages don't allow content scripts.** You get URL + title + the extraction error in the digest, and the prompt tells the agent to fetch the URL itself. It usually does.
-- **The extension is Manifest V2.** Firefox still runs it. When Mozilla kills MV2 the author will be angry on the internet and then port it.
+- **Cloudflare-walled pages digest exactly what your browser rendered.** That's the point: it runs in *your* browser with *your* cookies. Run it in a fresh profile and you get a captcha digested in loving detail.
+- **The built-in PDF viewer, `about:` / `chrome://` pages, and other privileged pages don't allow content scripts.** You get URL + title + the extraction error in the digest, and the prompt tells the agent to fetch the URL itself. It usually does.
+- **The Firefox extension is Manifest V2, the Chrome one is Manifest V3.** Same popup, same extractor, two 50-line background files. When Mozilla kills MV2 the author will be angry on the internet and then port it.
 - **One digest = one agent session = one tmux session = one terminal window.** If that's too many windows, you have a window manager problem, not a WTFISTHIS problem.
 - **Answers only sync when you open the popup** (or search). There is no daemon. There will be no daemon.
+
+## Chrome Web Store
+
+Not listed yet. The zip that goes up is `wtfisthis-chrome.zip` from `./install.sh`: it is `chrome/` with the `key` line removed from the manifest, because the store refuses a manifest that carries one ([chromium-extensions: "key field is not allowed in manifest"](https://groups.google.com/a/chromium.org/g/chromium-extensions/c/x_NBS6_-NKs)). Maintainer notes, so nobody has to re-read Google's docs:
+
+1. One-time developer registration (a fee, and the account email cannot be changed later): https://developer.chrome.com/docs/webstore/register
+2. Dashboard: https://chrome.google.com/webstore/devconsole → **Add new item** → upload the zip ([publish guide](https://developer.chrome.com/docs/webstore/publish)). The store assigns the item id from its own key. Then **Package → View public key**, paste that one-line key into `chrome/manifest.json` as `key`, commit, rerun `./install.sh`: unpacked installs, store installs and the host manifest now share one id ([Chrome: key field](https://developer.chrome.com/docs/extensions/reference/manifest/key)).
+3. Store listing needs a 128x128 icon (`chrome/icons/128.png`) and at least one 1280x800 screenshot ([listing requirements](https://developer.chrome.com/docs/webstore/cws-dashboard-listing)).
+4. Privacy tab: single purpose, a justification for every permission (`nativeMessaging`, `tabs`, `scripting`, `<all_urls>`), data-usage disclosure, privacy policy link ([privacy tab](https://developer.chrome.com/docs/webstore/cws-dashboard-privacy)).
+5. Distribution tab: Public, Unlisted (install by link, no listing) or Private ([visibility options](https://developer.chrome.com/docs/webstore/cws-dashboard-distribution)). Submit for review. "For most extensions, review is completed within a few days, but it can take up to a few weeks"; `<all_urls>` and `tabs` are explicitly on the slow list ([review process](https://developer.chrome.com/docs/webstore/review-process)).
 
 ## License
 
